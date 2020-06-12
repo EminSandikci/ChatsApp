@@ -1,3 +1,3 @@
 # ChatsApp
 
-online chat program using socket.io written in node.js environment
+Online chat program using socket.io written in node.js environment
