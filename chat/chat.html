@@ -1,0 +1,724 @@
+<html>
+
+<head>
+    <title>ChatsApp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css" type="text/css"
+    rel="stylesheet">
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+<!-- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script> -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<style>
+    .modal-header,
+    .close {
+        background-color: #2874A6;
+        color: white !important;
+        text-align: center;
+        font-size: 30px;
+    }
+
+    .btn.success {
+        background-color: #2874A6;
+        color: white !important;
+        text-align: center;
+    }
+</style>
+
+<script>
+    //kullanici Adi bulma
+    function getUrlVars() {
+        var vars = {};
+        var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function (m, key, value) {
+            vars[key] = value;
+        });
+        return vars;
+    }
+
+
+</script>
+
+<script>
+    var socket = io();
+    var username;
+    var checkSelect = 0;
+    var state = "";
+    var activeGroup = "";
+    var activeUser = "";
+    var deleteControl = false;
+
+    var params = getUrlVars();
+    username = params["username"];
+
+    $(document).ready(function () {
+        $("#title").text(username);
+    });
+
+    socket.emit("set_username", username);
+
+    socket.emit("groupFetchMembers", username);
+
+    socket.emit("usersFetchMembers");
+
+</script>
+
+<script>
+
+    function globalFetch() {
+        $("#msg_history").empty();
+        socket.emit("fetchGlobalMessage");
+        checkSelect++;
+        state = "global";
+    }
+    function groupFetch(groupName) {
+        if (deleteControl == true) {
+            deleteControl = false;
+            return;
+        }
+        $("#msg_history").empty();
+        socket.emit("fetchGroupMessage", groupName);
+        checkSelect++;
+        state = "group";
+        activeGroup = groupName;
+    }
+    function personFetch(targetName) {
+        $("#msg_history").empty()
+        socket.emit("fetchUserMessage", { target: targetName, source: username });
+        checkSelect++;
+        state = "user";
+        activeUser = targetName;
+    }
+    function grupOlustur() {
+
+        var secililer = document.querySelectorAll("#user_name");
+        var grup_isim = $("#grup_ismi").val();
+        if (grup_isim.trim() != "") {
+
+            var grup_elemanlar = [];
+            grup_elemanlar.push({
+                name: username,
+                group_name: grup_isim
+            });
+            secililer.forEach(element => {
+                if (element.checked == true) {
+                    grup_elemanlar.push({
+                        name: element.value,
+                        group_name: grup_isim
+                    });
+                    element.checked = false;
+                }
+            });
+            $("#massageS").html("Kayıt Başarılı !!!");
+            socket.emit("groupAdd", grup_elemanlar);
+        } else {
+            $("#massageE").html("Hatalı Grup Adı !!!");
+        }
+
+        $("#grup_ismi").val("");
+    }
+
+    socket.on("resposeMessage", (data) => {
+        data.forEach(element => {
+            if (username == element.username) {
+                $("#msg_history").append(
+                    "<div class='outgoing_msg'>" +
+                    "<div class='sent_msg'>" +
+                    "<p>" + element.message + "</p>" +
+                    "</div>" +
+                    "</div>"
+                );
+            } else {
+                $("#msg_history").append(
+                    "<div class='incoming_msg'>" +
+                    "<div class='received_msg'>" +
+                    "<div class='incoming_msg_img'>" +
+                    "<div class='recent_heading'>" +
+                    "<h6>[" + element.username + "]</h6>" +
+                    "</div>" +
+                    "</div>" +
+                    "<div class='received_withd_msg'>" +
+                    "<p>" + element.message + "</p>" +
+                    "</div>" +
+                    "</div>" +
+                    "</div>"
+                );
+            }
+        });
+        var gorunum = document.getElementById("msg_history");
+        gorunum.scrollTop = gorunum.scrollHeight;
+    });
+
+
+    socket.on("getGroups", (data) => {
+        data.forEach(element => {
+            $("#group_area").append(
+                "<div id='" + element.grup_adi.trim() + "' class='chat_list' onclick='groupFetch(\"" + element.grup_adi + "\")'>" +
+                "<div class='chat_people'>" +
+                "<div class='chat_img'> <img src='https://image.flaticon.com/icons/svg/33/33308.svg'></div>" +
+                "<div class='chat_ib'>" +
+                "<h5 class='alone'>" + element.grup_adi + "<span class='chat_date' onclick='ayril(\"" + element.grup_adi + "\")'>ayrıl</span></h5>" +
+                "</div>" +
+                "</div>" +
+                "</div>"
+            );
+        });
+    });
+    socket.on("getUsers", (data) => {
+        data.forEach(element => {
+            if (username == element.username) { }
+            else {
+                var stateImage = "";
+                if (element.state == "Online") stateImage = "https://image.flaticon.com/icons/svg/304/304286.svg";
+                else stateImage = "https://image.flaticon.com/icons/svg/304/304323.svg";
+
+                $("#users_area").append(
+                    "<div class='chat_list' onclick='personFetch(\"" + element.username + "\")'>" +
+                    "<div class='chat_people'>" +
+                    "<div class='chat_img'><img src='https://image.flaticon.com/icons/svg/74/74472.svg'></div>" +
+                    "<div class='chat_ib'>" +
+                    "<h5>" + element.username + "</h5>" +
+                    "<p id='" + element.username + "'>" + element.state + " <img class='connect' src='" + stateImage + "'></p>" +
+                    "</div>" +
+                    "</div>" +
+                    "</div>"
+                );
+
+                $("#users_name_body").append(
+                    "<tr>" +
+                    "<td>" + element.username + "</td>" +
+                    "<td class='text-center'><input type='checkbox' id='user_name' value='" + element.username + "'></td>" +
+                    "</tr>"
+                );
+            }
+        });
+    });
+
+    function sendMessage() {
+        if (checkSelect == 0 || $("#messageText").val().trim() == "") return;
+        var messages = $("#messageText").val();
+
+        switch (state) {
+            case "global":
+                socket.emit("globalMessage", { message: messages, username: username });
+                break;
+            case "group":
+                socket.emit("groupMessage", { message: messages, username: username, group: activeGroup });
+                break;
+            case "user":
+                socket.emit("userMessage", { message: messages, sourceUser: username, targetUser: activeUser });
+                break;
+        }
+
+        $("#messageText").val("");
+        $("#msg_history").append(
+            "<div class='outgoing_msg'>" +
+            "<div class='sent_msg'>" +
+            "<p>" + messages + "</p>" +
+            "</div>" +
+            "</div>"
+        );
+        var gorunum = document.getElementById("msg_history");
+        gorunum.scrollTop = gorunum.scrollHeight;
+    }
+
+    socket.on("messageTrigger", (data) => {
+
+        if (state == data.type && username != data.username) {
+            if (data.target && data.target == activeGroup) { }
+            else if (data.target && data.target == activeUser) { }
+            else if (state == "global") { }
+            else return;
+
+            $("#msg_history").append(
+                "<div class='incoming_msg'>" +
+                "<div class='received_msg'>" +
+                "<div class='incoming_msg_img'>" +
+                "<div class='recent_heading'>" +
+                "<h6>[" + data.username + "]</h6>" +
+                "</div>" +
+                "</div>" +
+                "<div class='received_withd_msg'>" +
+                "<p>" + data.message + "</p>" +
+                "</div>" +
+                "</div>" +
+                "</div>"
+            );
+
+            var gorunum = document.getElementById("msg_history");
+            gorunum.scrollTop = gorunum.scrollHeight;
+        }
+    });
+    socket.on("groupTrigger", (data) => {
+        $("#group_area").append(
+            "<div id='" + data.trim() + "' class='chat_list' onclick='groupFetch(\"" + data + "\")'>" +
+            "<div class='chat_people'>" +
+            "<div class='chat_img'> <img src='https://image.flaticon.com/icons/svg/33/33308.svg'>" +
+            "</div>" +
+            "<div class='chat_ib'>" +
+            "<h5 class='alone'>" + data + "<span class='chat_date' onclick='ayril(\"" + data + "\")'>ayrıl</span></h5>" +
+            "</div>" +
+            "</div>" +
+            "</div>"
+        );
+    });
+    socket.on("userTrigger", (data) => {
+        $("#users_area").append(
+            "<div class='chat_list' onclick='personFetch(\"" + data.username + "\")'>" +
+            "<div class='chat_people'>" +
+            "<div class='chat_img'><img src='https://image.flaticon.com/icons/svg/74/74472.svg'></div>" +
+            "<div class='chat_ib'>" +
+            "<h5>" + data.username + "</h5>" +
+            "<p id='" + data.username + "'>Offline <img class='connect' src='https://image.flaticon.com/icons/svg/304/304323.svg'></p>" +
+            "</div>" +
+            "</div>" +
+            "</div>"
+        );
+
+        $("#users_name_body").append(
+            "<tr>" +
+            "<td>" + data.username + "</td>" +
+            "<td class='text-center'><input type='checkbox' id='user_name' value='" + data.username + "'></td>" +
+            "</tr>"
+        );
+    });
+
+    socket.on("usersState", (data) => {
+        if (data.username == username) return;
+
+        if (data.state == "Online") $("#" + data.username).html(data.state + " <img class='connect' src='https://image.flaticon.com/icons/svg/304/304286.svg'>");
+        else $("#" + data.username).html(data.state + " <img class='connect' src='https://image.flaticon.com/icons/svg/304/304323.svg'>");
+    });
+
+    function ayril(groupName) {
+        socket.emit("deleteGroup", { username: username, group_name: groupName });
+        $("#msg_history").html("Sohbet Seçiniz...");
+        $("#" + groupName.trim()).remove();
+        deleteControl = true;
+    }
+
+</script>
+
+<script>
+    function enterKontrol(e) {
+        if (e.keyCode == 13) {
+            sendMessage();
+        }
+    }
+</script>
+
+
+<style>
+    body {
+        padding: 0px;
+        margin: 0px;
+    }
+
+    .container {
+        max-width: 1170px;
+        margin: auto;
+    }
+
+    img {
+        max-width: 100%;
+    }
+
+    .inbox_people {
+        background: #f8f8f8 none repeat scroll 0 0;
+        float: left;
+        overflow: hidden;
+        width: 40%;
+        border-right: 1px solid #c4c4c4;
+    }
+
+    .inbox_msg {
+        border: 1px solid #c4c4c4;
+        clear: both;
+        overflow: hidden;
+    }
+
+    .top_spac {
+        margin: 20px 0 0;
+    }
+
+
+    .recent_heading {
+        float: left;
+        width: 40%;
+    }
+
+    .recent_heading_right {
+        float: right;
+        text-align: right;
+        cursor: pointer;
+        margin-top: 5px;
+    }
+
+    .srch_bar {
+        display: inline-block;
+        text-align: right;
+        width: 60%;
+    }
+
+    .headind_srch {
+        padding: 10px 29px 10px 20px;
+        overflow: hidden;
+        border-bottom: 1px solid #c4c4c4;
+    }
+
+    .recent_heading h4 {
+        color: #05728f;
+        font-size: 21px;
+        margin: auto;
+    }
+
+    .recent_heading h6 {
+        color: #05728f;
+        font-size: 15px;
+        margin-bottom: 3px;
+        margin-top: 10px;
+    }
+
+    .recent_heading_right h4 {
+        color: #05728f;
+        font-size: 15px;
+        text-decoration: underline;
+        margin: auto;
+    }
+
+    .srch_bar input {
+        border: 1px solid #cdcdcd;
+        border-width: 0 0 1px 0;
+        width: 80%;
+        padding: 2px 0 4px 6px;
+        background: none;
+    }
+
+    .srch_bar .input-group-addon button {
+        background: rgba(0, 0, 0, 0) none repeat scroll 0 0;
+        border: medium none;
+        padding: 0;
+        color: #707070;
+        font-size: 18px;
+    }
+
+    .srch_bar .input-group-addon {
+        margin: 0 0 0 -27px;
+    }
+
+    .chat_ib h5 {
+        font-size: 15px;
+        color: #464646;
+        margin: 0 0 8px 0;
+    }
+
+    .alone {
+        font-size: 15px;
+        color: #464646;
+        padding-top: 13px;
+        cursor: context-menu;
+    }
+
+    .chat_date {
+        font-size: 14px;
+        text-decoration: underline;
+        float: right;
+        z-index: 100;
+        cursor: pointer;
+    }
+
+    .chat_ib p {
+        font-size: 14px;
+        color: #989898;
+        margin: auto;
+    }
+
+    .chat_img {
+        float: left;
+        width: 10%;
+    }
+
+    .chat_ib {
+        float: left;
+        padding: 0 0 0 15px;
+        width: 88%;
+        cursor: context-menu;
+    }
+
+    .chat_people {
+        overflow: hidden;
+        clear: both;
+    }
+
+    .chat_list {
+        border-bottom: 1px solid #c4c4c4;
+        margin: 0;
+        padding: 16px 16px 10px;
+    }
+
+    .chat_list_label {
+        border-bottom: 1px solid #c4c4c4;
+        margin: 0;
+        padding: 13px 16px 7px;
+        pointer-events: none;
+    }
+
+    .inbox_chat {
+        height: 550px;
+        overflow-y: scroll;
+        scroll-behavior: unset;
+    }
+
+    .chat_list:hover {
+        background: #ebebeb;
+    }
+
+    .incoming_msg_img {
+        display: inline-block;
+        width: 6%;
+    }
+
+    .received_msg {
+        display: inline-block;
+        padding: 0 0 10px 10px;
+        vertical-align: top;
+        width: 92%;
+    }
+
+    .write_msg:focus {
+        outline: none !important;
+    }
+
+    .received_withd_msg p {
+        background: #ebebeb none repeat scroll 0 0;
+        border-radius: 3px;
+        color: #646464;
+        font-size: 14px;
+        margin: 0;
+        padding: 5px 10px 5px 12px;
+        width: 100%;
+    }
+
+    .time_date {
+        color: #747474;
+        display: block;
+        font-size: 12px;
+        margin: 8px 0 0;
+    }
+
+    .group_label {
+        color: #747474;
+        display: block;
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    .received_withd_msg {
+        width: 57%;
+    }
+
+    .mesgs {
+        float: left;
+        padding: 30px 15px 0 25px;
+        width: 60%;
+    }
+
+    .sent_msg p {
+        background: #05728f none repeat scroll 0 0;
+        border-radius: 3px;
+        font-size: 14px;
+        margin: 0;
+        color: #fff;
+        padding: 5px 10px 5px 12px;
+        width: 100%;
+    }
+
+    .outgoing_msg {
+        overflow: hidden;
+        margin: 26px 0 26px;
+    }
+
+    .sent_msg {
+        float: right;
+        width: 46%;
+    }
+
+    .input_msg_write input {
+        background: rgba(0, 0, 0, 0) none repeat scroll 0 0;
+        border: medium none;
+        color: #4c4c4c;
+        font-size: 15px;
+        min-height: 48px;
+        width: 100%;
+    }
+
+    .type_msg {
+        border-top: 1px solid #c4c4c4;
+        position: relative;
+    }
+
+    .msg_send_btn {
+        background: #05728f none repeat scroll 0 0;
+        border: medium none;
+        border-radius: 50%;
+
+        color: #fff;
+        cursor: pointer;
+        font-size: 17px;
+        outline: none !important;
+        height: 33px;
+        position: absolute;
+        right: 0;
+        top: 11px;
+        width: 33px;
+    }
+
+    .connect {
+        width: 13px;
+        height: 13px;
+    }
+
+    .messaging {
+        padding: 0 0 5px 0;
+    }
+
+    .msg_history {
+        height: 516px;
+        overflow-y: auto;
+    }
+</style>
+
+<body>
+    <div class="container">
+        <h3 class=" text-center"></h3>
+        <div class="messaging">
+            <div class="inbox_msg">
+                <div class="inbox_people">
+                    <div class="headind_srch">
+                        <div class="recent_heading">
+                            <h4 id="title"></h4>
+                        </div>
+                        <div class="recent_heading_right">
+                            <h4><a href="/">Çıkış</a></h4>
+                        </div>
+                    </div>
+                    <div class="inbox_chat">
+
+                        <div class="chat_list" onclick="globalFetch()">
+                            <div class="chat_people">
+                                <div class="chat_img"> <img src="https://image.flaticon.com/icons/svg/1231/1231223.svg">
+                                </div>
+                                <div class="chat_ib">
+                                    <h5 class="alone">Genel</h5>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="chat_list_label">
+                            <div class="chat_people">
+                                <div class="chat_ib">
+                                    <h5>Gruplar</h5>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="chat_list" class="chat_list" data-toggle="modal" data-target="#myModal">
+                            <div class="chat_people">
+                                <div class="chat_img"> <img src="https://image.flaticon.com/icons/svg/149/149688.svg">
+                                </div>
+                                <div class="chat_ib">
+                                    <h5 class="alone">Grup Oluştur</h5>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="group_area">
+
+
+                        </div>
+                        <div class="chat_list_label">
+                            <div class="chat_people">
+                                <div class="chat_ib">
+                                    <h5>Kullanıcılar</h5>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="users_area">
+
+
+                        </div>
+                    </div>
+                </div>
+                <div class="mesgs">
+                    <div id="msg_history" class="msg_history">
+                        <div class="first_message">
+                            Sohbet Seçiniz...
+                        </div>
+                    </div>
+                    <div class="type_msg">
+                        <div class="input_msg_write">
+                            <input id="messageText" type="text" class="write_msg" placeholder="Mesaj Yaz"
+                                onkeypress="enterKontrol(event)" />
+                            <button id="msg_send_btn" class="msg_send_btn" type="button" onclick="sendMessage()"><i
+                                    class="fa fa-paper-plane-o" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="myModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Grup Oluştur</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text" id="basic-addon1">Grup Adı</span>
+                            </div>
+                            <input id="grup_ismi" type="text" class="form-control" placeholder="Grup Adı"
+                                aria-label="Username" aria-describedby="basic-addon1">
+                        </div>
+                    </p>
+                    <span id="massageS" class="text-success"></span>
+                    <span id="massageE" class="text-danger"></span>
+                    <p class="text-secondary">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Kullanıcı Adı</th>
+                                    <th class="text-center" scope="col">Ekle</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users_name_body">
+
+                            </tbody>
+                        </table>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn success" onclick="grupOlustur()">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $("#myModal").on("hidden.bs.modal", function () {
+            $("#massageE").html("");
+            $("#massageS").html("");
+        });
+    </script>
+
+</body>
+
+</html>

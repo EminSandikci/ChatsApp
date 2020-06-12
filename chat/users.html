@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<title>ChatsApp</title>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+<head>
+    <link href="https://fonts.googleapis.com/css?family=Lobster" rel="stylesheet">
+</head>
+
+<style>
+    body {
+        background-color: #eee;
+    }
+
+    .container-fluid {
+        padding: 50px;
+    }
+
+    .container {
+        background-color: white;
+        padding: 50px;
+    }
+
+    #title {
+        font-family: 'Lobster', cursive;
+        ;
+    }
+
+    .topMarg{
+        margin-top: 10px;
+    }
+</style>
+
+<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+<script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+    $(document).ready(function(){
+        var vars = {};
+        var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function (m, key, value) {
+            vars[key] = value;
+        });
+
+        if(vars["massage"] == "login"){
+            $("#singinText").html("");
+            $("#singinTextS").html("");
+            $("#loginText").html("Kullanıcı Bulunamadı !!!");
+        }else if(vars["massage"] == "singin"){
+            $("#loginText").html("");
+            $("#singinTextS").html("");
+            $("#singinText").html("Kullanıcı Zaten Var !!!");
+        }else if(vars["massage"] == "success"){
+            $("#singinText").html("");
+            $("#loginText").html("");
+            $("#singinTextS").html("Kayıt Başarılı !!!");
+        }
+    });
+</script>
+
+<script>
+    function kontrolS() {
+        if($("#passwordS").val() != $("#password2S").val()) {
+            $("#loginText").html("");
+            $("#singinText").html("Şifre Aynı Değil !!!");
+            return false;
+        }
+        if($("#usernameS").val().trim() == "" || $("#emailS").val().trim() == "" || $("#passwordS").val().trim() == "" || $("#password2S").val().trim() == ""){
+            $("#loginText").html("");
+            $("#singinText").html("Alanlar Boş Geçilemez !!!");
+            return false;
+        }
+        
+        return true;
+    }
+
+    function kontrolL(){
+        if($("#usernameL").val().trim() == "" || $("#passwordL").val().trim() == ""){
+            $("#singinText").html("");
+            $("#loginText").html("Alanlar Boş Geçilemez !!!");
+            return false;
+        }
+        
+        return true;
+    }
+</script>
+
+<body>
+    <div class="container-fluid">
+        <div class="container">
+            <h2 class="text-center" id="title">ChatsApp</h2>
+            <hr>
+            <div class="row">
+                <div class="col-md-5">
+                    <form role="form" method="POST" onsubmit="return kontrolS()" action="/singin">
+                        <fieldset>
+                            <p class="pull-center"><b>KULLANICI KAYIT</b></p>
+                            <div class="form-group">
+                                <input type="text" name="username" id="usernameS" class="form-control input-lg"
+                                    placeholder="kullanıcı adı">
+                            </div>
+                            <div class="form-group">
+                                <input type="email" name="email" id="emailS" class="form-control input-lg"
+                                    placeholder="e-posta">
+                            </div>
+                            <div class="form-group">
+                                <input type="password" name="password" id="passwordS" class="form-control input-lg"
+                                    placeholder="şifre">
+                            </div>
+                            <div class="form-group">
+                                <input type="password" name="password2" id="password2S" class="form-control input-lg"
+                                    placeholder="şifre tekrar">
+                            </div>
+                            <span id="singinText" class="text-danger"></span>
+                            <span id="singinTextS" class="text-success"></span>
+                            <div class="topMarg">
+                                <button class="btn btn-lg btn-primary">Kayıt Ol</button>
+                            </div>
+                        </fieldset>
+                    </form>
+                </div>
+
+                <div class="col-md-2">
+                </div>
+
+                <div class="col-md-5">
+                    <form role="form" method="POST" onsubmit="return kontrolL()" action="/login">
+                        <fieldset>
+                            <p><b>KULLANICI GİRİŞ</b></p>
+
+                            <div class="form-group">
+                                <input type="text" name="username" id="usernameL" class="form-control input-lg"
+                                    placeholder="kullanıcı adı">
+                            </div>
+                            <div class="form-group">
+                                <input type="password" name="password" id="passwordL" class="form-control input-lg"
+                                    placeholder="şifre">
+                            </div>
+                            <span id="loginText" class="text-danger"></span>
+                            <div class="topMarg">
+                                <button class="btn btn-md">Giriş Yap</button>
+                            </div>
+                        </fieldset>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+
+
+</html>
